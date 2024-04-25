@@ -1,9 +1,9 @@
 query MyQuery @live(interval: 10000) {
     transactions(first: 1, orderBy: timestamp, orderDirection: desc) {
         swaps(first: 1) {
-            amountUSD
             amount0
             amount1
+            amountUSD
             pool {
                 token1 {
                     name
