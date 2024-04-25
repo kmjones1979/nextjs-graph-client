@@ -1,95 +1,90 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
-export default function Home() {
-  return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+// Updated import statements and proper use of the imports
+import { useEffect, useState } from "react";
+import { MyQueryDocument, MyQueryQuery, subscribe } from "../.graphclient";
+import { ExecutionResult } from "graphql";
+import type { NextPage } from "next";
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+const Home: NextPage = () => {
+    // Initialize `useState` to handle the GraphQL query result with proper typing and default value
+    const [result, setResult] = useState<ExecutionResult<MyQueryQuery> | null>(
+        null
+    );
 
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
+    useEffect(() => {
+        let shouldContinue = true; // Flag to control the subscription lifecycle
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
+        const fetchData = async () => {
+            try {
+                const fetchedResult = await subscribe(MyQueryDocument, {});
+                if ("data" in fetchedResult) {
+                    if (shouldContinue) {
+                        setResult(fetchedResult);
+                    }
+                } else {
+                    for await (const result of fetchedResult) {
+                        if (!shouldContinue) break;
+                        setResult(result);
+                        console.log(result);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch data:", error);
+            }
+        };
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
+        fetchData();
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
-}
+        return () => {
+            shouldContinue = false; // Clean up the subscription when the component unmounts
+        };
+    }, []); // Ensures it runs only once
+
+    return (
+        <>
+            <div className="flex items-center flex-col flex-grow pt-10">
+                <div className="px-5">
+                    <h1 className="text-center">
+                        <span className="block text-4xl font-bold">
+                            Query The Graph
+                        </span>
+                    </h1>
+                </div>
+                <div className="flex-grow bg-base-300 w-full mt-16 px-8 py-12">
+                    <ul>
+                        {result?.data?.transactions.map(
+                            (transaction, txnIndex) =>
+                                transaction.swaps.map((swap, swapIndex) => (
+                                    <li key={`${txnIndex}-${swapIndex}`}>
+                                        <div>
+                                            Amount0: {swap?.amount0 ?? "N/A"}
+                                        </div>
+                                        <div>
+                                            Amount1: {swap?.amount1 ?? "N/A"}
+                                        </div>
+                                        <div>
+                                            USD Amount:{" "}
+                                            {swap?.amountUSD ?? "N/A"}
+                                        </div>
+                                        <div>
+                                            Pool Token0:{" "}
+                                            {swap?.pool.token0?.name ??
+                                                "Unknown"}
+                                        </div>
+                                        <div>
+                                            Pool Token1:{" "}
+                                            {swap?.pool.token1?.name ??
+                                                "Unknown"}
+                                        </div>
+                                    </li>
+                                ))
+                        )}
+                    </ul>
+                </div>
+            </div>
+        </>
+    );
+};
+
+export default Home;
