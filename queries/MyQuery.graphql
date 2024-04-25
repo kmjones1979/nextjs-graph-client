@@ -1,0 +1,17 @@
+query MyQuery @live(interval: 10000) {
+    transactions(first: 1, orderBy: timestamp, orderDirection: desc) {
+        swaps(first: 1) {
+            amountUSD
+            amount0
+            amount1
+            pool {
+                token1 {
+                    name
+                }
+                token0 {
+                    name
+                }
+            }
+        }
+    }
+}
